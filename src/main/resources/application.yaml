@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: sistema-agendamento
+
+  datasource:
+    url: jdbc:mysql://localhost:3305/sistema_agendamento?createDatabaseIfNotExist=true
+    username: ${DATABASE_USERNAME:root}
+    password: ${DATABASE_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  jwt:
+    expiration: ${JWT_EXPIRATION:900000}
+    key: ${JWT_KEY:m=xg$SPBvSr8oX1EUQJ&3jeZP&9G8YXjEPH#=AhFISipBizw6a=&7kEjE&dpO6g#GnjK0KmiR.y&QVlS69ojgJtdZxSV8l!w4#INCKi1lYbsZM5P1h=!4euUMTkOsv$Lb8mhSBkm19SOOHCp4X6f5XP5=2PGV2H8Q!WObrEkBocmQG-T=uB=bmB5EG3dRnrFijD!wn9nrYaXHQWFeu_iqz.Q.bhjUGyfQSKqqMONa0L4NXEhsI9Oj0sgUoCG7Ui3ZhfFgv#wN2As9-$IUURKOe8Gm=uRJ$hoWx6veGcZofX2aiQ3w-LzX!=9&9nL#CRTbWdvKJKCEpmWkyrV=wBvPUqX}
