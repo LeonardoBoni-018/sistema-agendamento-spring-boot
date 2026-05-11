@@ -1,4 +1,4 @@
-package config;
+package com.sistemaagendamento.config;
 
 
 import io.jsonwebtoken.Claims;

@@ -1,4 +1,4 @@
-package databse.model;
+package com.sistemaagendamento.databse.model;
 
 import jakarta.persistence.*;
 import lombok.*;

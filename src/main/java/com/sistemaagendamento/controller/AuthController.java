@@ -1,16 +1,16 @@
-package controller;
+package com.sistemaagendamento.controller;
 
-import dto.LoginRequestDto;
-import dto.TokenResponseDto;
-import dto.UserRegisterDto;
-import exception.BadrequestExeption;
+import com.sistemaagendamento.dto.LoginRequestDto;
+import com.sistemaagendamento.dto.TokenResponseDto;
+import com.sistemaagendamento.dto.UserRegisterDto;
+import com.sistemaagendamento.exception.BadrequestExeption;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import service.AuthenticationService;
+import com.sistemaagendamento.service.AuthenticationService;
 
 @RestController
 @RequestMapping("/v1/auth")

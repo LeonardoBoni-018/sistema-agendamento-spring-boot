@@ -1,4 +1,4 @@
-package config;
+package com.sistemaagendamento.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -40,7 +40,7 @@ public class SecurityConfiguration {
                         }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/v1/avaliacoes").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.POST, "/v1/avaliacoes").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

@@ -1,7 +1,8 @@
-package dto;
+package com.sistemaagendamento.dto;
 
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 @Getter
@@ -18,7 +19,11 @@ public class UserRegisterDto {
     private String email;
 
     @NotBlank
-    private long phone;
+    @Pattern(
+            regexp = "^\\d{10,11}$",
+            message = "Telefone inválido"
+    )
+    private String phone;
 
     @NotBlank
     private String password;

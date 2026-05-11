@@ -1,16 +1,16 @@
-package service;
+package com.sistemaagendamento.service;
 
 
-import config.TokenProvider;
-import databse.model.RoleEntity;
-import databse.model.UserEntity;
-import databse.repository.IRolesRepository;
-import databse.repository.IUserRepository;
-import dto.LoginRequestDto;
-import dto.TokenResponseDto;
-import dto.UserRegisterDto;
-import enums.RoleTypeEnum;
-import exception.BadrequestExeption;
+import com.sistemaagendamento.config.TokenProvider;
+import com.sistemaagendamento.databse.model.RoleEntity;
+import com.sistemaagendamento.databse.model.UserEntity;
+import com.sistemaagendamento.databse.repository.IRolesRepository;
+import com.sistemaagendamento.databse.repository.IUserRepository;
+import com.sistemaagendamento.dto.LoginRequestDto;
+import com.sistemaagendamento.dto.TokenResponseDto;
+import com.sistemaagendamento.dto.UserRegisterDto;
+import com.sistemaagendamento.enums.RoleTypeEnum;
+import com.sistemaagendamento.exception.BadrequestExeption;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,11 +28,13 @@ public class AuthenticationService {
 
     private final IUserRepository userRepository;
     private final IRolesRepository rolesRepository;
-    private PasswordEncoder passwordEncoder;
-    private AuthenticationManager authenticationManager;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
+
     @Value("${jwt.expiration}")
     private long expirationTime;
+
 
     public void register(UserRegisterDto userRegisterDto) throws BadrequestExeption{
         UserEntity user = userRepository.findByEmail(userRegisterDto.getEmail()).orElse(null);
@@ -41,7 +43,7 @@ public class AuthenticationService {
             throw new BadrequestExeption("Usuário já registrado com este email!");
         }
 
-        RoleEntity role = rolesRepository.findByNome(RoleTypeEnum.ROLE_USER.name()).orElseGet(() -> rolesRepository.save(RoleEntity.builder()
+        RoleEntity role = rolesRepository.findByName(RoleTypeEnum.ROLE_USER.name()).orElseGet(() -> rolesRepository.save(RoleEntity.builder()
                         .name(RoleTypeEnum.ROLE_USER.name())
                 .build()));
 
@@ -62,7 +64,7 @@ public class AuthenticationService {
             throw new BadrequestExeption("Usuário já registrado com este email!");
         }
 
-        RoleEntity role = rolesRepository.findByNome(RoleTypeEnum.ROLE_ADMIN.name()).orElseGet(() -> rolesRepository.save(RoleEntity.builder()
+        RoleEntity role = rolesRepository.findByName(RoleTypeEnum.ROLE_ADMIN.name()).orElseGet(() -> rolesRepository.save(RoleEntity.builder()
                 .name(RoleTypeEnum.ROLE_ADMIN.name())
                 .build()));
 

@@ -1,6 +1,5 @@
-package databse.model;
+package com.sistemaagendamento.databse.model;
 
-import databse.model.RoleEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;

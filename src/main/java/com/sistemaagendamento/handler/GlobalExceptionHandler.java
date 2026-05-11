@@ -1,8 +1,8 @@
-package handler;
+package com.sistemaagendamento.handler;
 
-import exception.BadrequestExeption;
-import exception.ErrorResponse;
-import exception.NotFoundException;
+import com.sistemaagendamento.exception.BadrequestExeption;
+import com.sistemaagendamento.exception.ErrorResponse;
+import com.sistemaagendamento.exception.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;

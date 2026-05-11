@@ -1,4 +1,4 @@
-package enums;
+package com.sistemaagendamento.enums;
 
 public enum RoleTypeEnum {
     ROLE_USER,
