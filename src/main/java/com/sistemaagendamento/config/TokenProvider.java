@@ -28,7 +28,7 @@ public class TokenProvider {
 
     private String buildToken(String userName){
         Date now = new Date();
-        Date expiration = new Date(now.getTime() - expirationTime);
+        Date expiration = new Date(now.getTime() + expirationTime);
 
         return Jwts.builder()
                 .subject(userName)
