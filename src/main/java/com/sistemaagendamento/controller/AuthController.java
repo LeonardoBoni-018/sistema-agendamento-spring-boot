@@ -6,10 +6,8 @@ import com.sistemaagendamento.dto.UserRegisterDto;
 import com.sistemaagendamento.exception.BadrequestExeption;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 import com.sistemaagendamento.service.AuthenticationService;
 
 @RestController
@@ -19,16 +17,19 @@ public class AuthController {
 
     private final AuthenticationService authenticationService;
     @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
     public void register(@RequestBody @Valid UserRegisterDto userRegisterDto) throws BadrequestExeption {
         authenticationService.register(userRegisterDto);
     }
 
     @PostMapping("/register/admin")
+    @ResponseStatus(HttpStatus.OK)
     public void registerAdmin(@RequestBody @Valid UserRegisterDto userRegisterDto) throws BadrequestExeption {
         authenticationService.registerAdmin(userRegisterDto);
     }
 
     @PostMapping("/login")
+    @ResponseStatus(HttpStatus.OK)
     public TokenResponseDto register(@RequestBody @Valid LoginRequestDto loginRequestDto) throws BadrequestExeption {
         return authenticationService.login(loginRequestDto);
     }
