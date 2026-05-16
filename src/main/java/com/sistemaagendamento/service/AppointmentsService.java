@@ -12,20 +12,26 @@ import com.sistemaagendamento.enums.AppointmentsStatusEnum;
 import com.sistemaagendamento.exception.BadrequestExeption;
 import com.sistemaagendamento.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AppointmentsService {
 
-    // Horário de funcionamento
-    private static final LocalTime OPEN_TIME = LocalTime.of(8, 0);
-    private static final LocalTime CLOSE_TIME = LocalTime.of(18, 0);
+    @Value("${appointment.schedule.open-time}")
+    private LocalTime openTime;
+
+    @Value("${appointment.schedule.close-time}")
+    private LocalTime closeTime;
 
     private final IAppointmentsRepository appointmentsRepository;
     private final IUserRepository userRepository;
@@ -38,10 +44,8 @@ public class AppointmentsService {
     ) {
         UserEntity loggedUser = (UserEntity) authentication.getPrincipal();
 
-        List<AppointmentsEntity> appointments =
-                appointmentsRepository.findByUserId(loggedUser.getId());
-
-        return appointments.stream()
+        return appointmentsRepository.findByUserId(loggedUser.getId())
+                .stream()
                 .filter(a -> status == null || a.getStatus() == status)
                 .filter(a -> date == null || a.getDate().equals(date))
                 .map(this::toResponseDto)
@@ -56,10 +60,20 @@ public class AppointmentsService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado!"));
 
-        List<AppointmentsEntity> appointments =
-                appointmentsRepository.findByUserId(userId);
+        return appointmentsRepository.findByUserId(userId)
+                .stream()
+                .filter(a -> status == null || a.getStatus() == status)
+                .filter(a -> date == null || a.getDate().equals(date))
+                .map(this::toResponseDto)
+                .toList();
+    }
 
-        return appointments.stream()
+    public List<AppointmentResponseDto> findAllAppointments(
+            AppointmentsStatusEnum status,
+            LocalDate date
+    ) {
+        return appointmentsRepository.findAll()
+                .stream()
                 .filter(a -> status == null || a.getStatus() == status)
                 .filter(a -> date == null || a.getDate().equals(date))
                 .map(this::toResponseDto)
@@ -88,6 +102,48 @@ public class AppointmentsService {
         }
 
         return toResponseDto(appointment);
+    }
+
+    // ✅ Retorna os horários livres do dia para um determinado serviço
+    public List<LocalTime> getAvailableTimes(LocalDate date, Integer jobId) {
+        JobEntity job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new NotFoundException("Serviço não encontrado!"));
+
+        List<AppointmentsEntity> bookedAppointments =
+                appointmentsRepository.findByDateAndStatusIn(
+                        date,
+                        List.of(
+                                AppointmentsStatusEnum.PENDING,
+                                AppointmentsStatusEnum.CONFIRMED
+                        )
+                );
+
+        List<LocalTime> available = new ArrayList<>();
+        LocalTime slot = openTime;
+
+        while (!slot.plusMinutes(job.getDurationMinutes()).isAfter(closeTime)) {
+            LocalTime slotEnd = slot.plusMinutes(job.getDurationMinutes());
+            boolean conflict = false;
+
+            for (AppointmentsEntity booked : bookedAppointments) {
+                LocalTime bookedStart = booked.getTime();
+                LocalTime bookedEnd = bookedStart.plusMinutes(
+                        booked.getJob().getDurationMinutes()
+                );
+                if (slot.isBefore(bookedEnd) && slotEnd.isAfter(bookedStart)) {
+                    conflict = true;
+                    break;
+                }
+            }
+
+            if (!conflict) {
+                available.add(slot);
+            }
+
+            slot = slot.plusMinutes(job.getDurationMinutes());
+        }
+
+        return available;
     }
 
     public void userCreateAppointment(
@@ -119,6 +175,10 @@ public class AppointmentsService {
                 .build();
 
         appointmentsRepository.save(appointment);
+
+        log.info("Agendamento criado: userId={}, jobId={}, date={}, time={}",
+                user.getId(), job.getId(),
+                appointmentDto.getDate(), appointmentDto.getTime());
     }
 
     private void validateAppointmentDate(AppointmentDto appointmentDto) {
@@ -133,12 +193,11 @@ public class AppointmentsService {
             throw new BadrequestExeption("Horário inválido!");
         }
 
-        // Validação de horário de funcionamento
-        if (appointmentDto.getTime().isBefore(OPEN_TIME) ||
-                appointmentDto.getTime().isAfter(CLOSE_TIME)) {
+        if (appointmentDto.getTime().isBefore(openTime) ||
+                appointmentDto.getTime().isAfter(closeTime)) {
             throw new BadrequestExeption(
                     "Agendamento fora do horário de atendimento! " +
-                            "Atendemos das " + OPEN_TIME + " às " + CLOSE_TIME + "."
+                            "Atendemos das " + openTime + " às " + closeTime + "."
             );
         }
     }
@@ -192,7 +251,6 @@ public class AppointmentsService {
         boolean isAdmin = loggedUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        // Garante que apenas o dono ou admin pode cancelar
         if (!isAdmin && !appointment.getUser().getId().equals(loggedUser.getId())) {
             throw new BadrequestExeption(
                     "Você não tem permissão para cancelar este agendamento!"
@@ -209,6 +267,9 @@ public class AppointmentsService {
 
         appointment.setStatus(AppointmentsStatusEnum.CANCELED);
         appointmentsRepository.save(appointment);
+
+        log.warn("Agendamento cancelado: id={}, canceladoPor={}",
+                appointmentId, loggedUser.getId());
     }
 
     public void updateStatusAppointment(
@@ -223,9 +284,10 @@ public class AppointmentsService {
 
         appointment.setStatus(statusEnum);
         appointmentsRepository.save(appointment);
+
+        log.info("Status atualizado: id={}, novoStatus={}", appointmentId, statusEnum);
     }
 
-    // Mapper centralizado - evita repetição
     private AppointmentResponseDto toResponseDto(AppointmentsEntity entity) {
         return AppointmentResponseDto.builder()
                 .id(entity.getId())
@@ -238,6 +300,8 @@ public class AppointmentsService {
                 .date(entity.getDate())
                 .time(entity.getTime())
                 .status(entity.getStatus())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
                 .build();
     }
 }

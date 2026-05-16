@@ -1,6 +1,5 @@
 package com.sistemaagendamento.service;
 
-
 import com.sistemaagendamento.config.TokenProvider;
 import com.sistemaagendamento.databse.model.RoleEntity;
 import com.sistemaagendamento.databse.model.UserEntity;
@@ -35,38 +34,29 @@ public class AuthenticationService {
     @Value("${jwt.expiration}")
     private long expirationTime;
 
-
-    public void register(UserRegisterDto userRegisterDto) throws BadrequestExeption{
-        UserEntity user = userRepository.findByEmail(userRegisterDto.getEmail()).orElse(null);
-
-        if(user != null){
+    public void register(UserRegisterDto userRegisterDto) throws BadrequestExeption {
+        if (userRepository.findByEmail(userRegisterDto.getEmail()).isPresent()) {
             throw new BadrequestExeption("Usuário já registrado com este email!");
         }
 
-        RoleEntity role = rolesRepository.findByName(RoleTypeEnum.ROLE_USER.name()).orElseGet(() -> rolesRepository.save(RoleEntity.builder()
-                        .name(RoleTypeEnum.ROLE_USER.name())
-                .build()));
+        RoleEntity role = findOrCreateRole(RoleTypeEnum.ROLE_USER);
 
         userRepository.save(UserEntity.builder()
                 .name(userRegisterDto.getName())
                 .email(userRegisterDto.getEmail())
-                        .phone(String.valueOf(userRegisterDto.getPhone()))
+                .phone(String.valueOf(userRegisterDto.getPhone()))
                 .roles(Set.of(role))
                 .password(passwordEncoder.encode(userRegisterDto.getPassword()))
                 .build()
         );
     }
 
-    public void registerAdmin(UserRegisterDto userRegisterDto){
-        UserEntity user = userRepository.findByEmail(userRegisterDto.getEmail()).orElse(null);
-
-        if(user != null){
+    public void registerAdmin(UserRegisterDto userRegisterDto) {
+        if (userRepository.findByEmail(userRegisterDto.getEmail()).isPresent()) {
             throw new BadrequestExeption("Usuário já registrado com este email!");
         }
 
-        RoleEntity role = rolesRepository.findByName(RoleTypeEnum.ROLE_ADMIN.name()).orElseGet(() -> rolesRepository.save(RoleEntity.builder()
-                .name(RoleTypeEnum.ROLE_ADMIN.name())
-                .build()));
+        RoleEntity role = findOrCreateRole(RoleTypeEnum.ROLE_ADMIN);
 
         userRepository.save(UserEntity.builder()
                 .name(userRegisterDto.getName())
@@ -80,13 +70,46 @@ public class AuthenticationService {
 
     public TokenResponseDto login(LoginRequestDto dto) throws BadrequestExeption {
         try {
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword()));
-            String token = tokenProvider.gerarToken(authentication);
-            return new TokenResponseDto(token, expirationTime);
-        } catch (BadCredentialsException e){
-            throw new BadrequestExeption("Credencias inválidas");
-        } catch (Exception e){
-            throw e;
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            dto.getEmail(), dto.getPassword()
+                    )
+            );
+            String accessToken = tokenProvider.gerarToken(authentication);
+            // ✅ refresh token com validade maior (ex: 7 dias)
+            String refreshToken = tokenProvider.gerarRefreshToken(authentication);
+            return new TokenResponseDto(accessToken, refreshToken, expirationTime);
+        } catch (BadCredentialsException e) {
+            throw new BadrequestExeption("Credenciais inválidas!");
         }
+    }
+
+    // ✅ Valida o refresh token e emite novo access token
+    public TokenResponseDto refreshToken(String refreshToken) {
+        if (!tokenProvider.isValidRefreshToken(refreshToken)) {
+            throw new BadrequestExeption("Refresh token inválido ou expirado!");
+        }
+
+        String email = tokenProvider.getEmailFromToken(refreshToken);
+
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadrequestExeption("Usuário não encontrado!"));
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user, null, user.getAuthorities()
+        );
+
+        String newAccessToken = tokenProvider.gerarToken(authentication);
+        String newRefreshToken = tokenProvider.gerarRefreshToken(authentication);
+
+        return new TokenResponseDto(newAccessToken, newRefreshToken, expirationTime);
+    }
+
+    // ✅ Evita duplicação entre register e registerAdmin
+    private RoleEntity findOrCreateRole(RoleTypeEnum roleType) {
+        return rolesRepository.findByName(roleType.name())
+                .orElseGet(() -> rolesRepository.save(
+                        RoleEntity.builder().name(roleType.name()).build()
+                ));
     }
 }

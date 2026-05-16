@@ -11,10 +11,11 @@ import java.time.LocalTime;
 @Table(name = "appointments")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class AppointmentsEntity {
+public class AppointmentsEntity extends AuditableEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -27,13 +28,9 @@ public class AppointmentsEntity {
     @JoinColumn(name = "job_id")
     private JobEntity job;
 
-    @Column(nullable = false)
     private LocalDate date;
-
-    @Column(nullable = false)
     private LocalTime time;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private AppointmentsStatusEnum status;
 }

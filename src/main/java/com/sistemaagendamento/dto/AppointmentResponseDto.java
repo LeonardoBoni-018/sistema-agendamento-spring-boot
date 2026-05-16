@@ -6,6 +6,7 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Getter
@@ -21,4 +22,6 @@ public class AppointmentResponseDto {
     private LocalDate date;
     private LocalTime time;
     private AppointmentsStatusEnum status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -6,25 +6,20 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "job")
+@Table(name = "jobs")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class JobEntity {
+public class JobEntity extends AuditableEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false)
     private String name;
-
     private String description;
-
-    @Column(nullable = false)
     private BigDecimal price;
-
-    @Column(name = "minutes_duration")
     private Integer durationMinutes;
 }
