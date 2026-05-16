@@ -1,7 +1,7 @@
 package com.sistemaagendamento.controller;
 
-import com.sistemaagendamento.databse.model.JobEntity;
 import com.sistemaagendamento.dto.JobDto;
+import com.sistemaagendamento.dto.JobResponseDto;
 import com.sistemaagendamento.dto.JobUpdateDto;
 import com.sistemaagendamento.service.JobService;
 import jakarta.validation.Valid;
@@ -24,33 +24,36 @@ public class JobController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
-    public void createJob(@Valid @RequestBody JobDto jobDto){
+    public void createJob(@Valid @RequestBody JobDto jobDto) {
         jobService.createJob(jobDto);
     }
 
     @PutMapping("/{jobId}")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.OK)
-    public void updateJob(@PathVariable Integer jobId, @RequestBody JobUpdateDto jobUpdateDto){
+    public void updateJob(
+            @PathVariable Integer jobId,
+            @RequestBody JobUpdateDto jobUpdateDto
+    ) {
         jobService.updateJob(jobId, jobUpdateDto);
     }
 
     @DeleteMapping("/{jobId}")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteJob(@PathVariable Integer jobId){
+    public void deleteJob(@PathVariable Integer jobId) {
         jobService.deleteJob(jobId);
     }
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public List<JobEntity> getAllJobs(){
-        return jobService.fildAllJobs();
+    public List<JobResponseDto> getAllJobs() {
+        return jobService.findAllJobs();
     }
 
     @GetMapping("/{jobId}")
     @ResponseStatus(HttpStatus.OK)
-    public JobEntity getJobById(@PathVariable Integer jobId){
+    public JobResponseDto getJobById(@PathVariable Integer jobId) {
         return jobService.findJobById(jobId);
     }
 }

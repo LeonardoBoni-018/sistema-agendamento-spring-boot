@@ -7,6 +7,7 @@ import com.sistemaagendamento.exception.BadrequestExeption;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.sistemaagendamento.service.AuthenticationService;
 
@@ -16,21 +17,30 @@ import com.sistemaagendamento.service.AuthenticationService;
 public class AuthController {
 
     private final AuthenticationService authenticationService;
+
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public void register(@RequestBody @Valid UserRegisterDto userRegisterDto) throws BadrequestExeption {
+    public void register(
+            @RequestBody @Valid UserRegisterDto userRegisterDto
+    ) throws BadrequestExeption {
         authenticationService.register(userRegisterDto);
     }
 
+    //endpoint protegido — apenas admins podem criar outros admins
     @PostMapping("/register/admin")
-    @ResponseStatus(HttpStatus.OK)
-    public void registerAdmin(@RequestBody @Valid UserRegisterDto userRegisterDto) throws BadrequestExeption {
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void registerAdmin(
+            @RequestBody @Valid UserRegisterDto userRegisterDto
+    ) throws BadrequestExeption {
         authenticationService.registerAdmin(userRegisterDto);
     }
 
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
-    public TokenResponseDto register(@RequestBody @Valid LoginRequestDto loginRequestDto) throws BadrequestExeption {
+    public TokenResponseDto login(
+            @RequestBody @Valid LoginRequestDto loginRequestDto
+    ) throws BadrequestExeption {
         return authenticationService.login(loginRequestDto);
     }
 }

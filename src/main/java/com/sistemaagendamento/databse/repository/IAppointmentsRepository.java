@@ -24,5 +24,5 @@ public interface IAppointmentsRepository extends JpaRepository<AppointmentsEntit
             List<AppointmentsStatusEnum> status
     );
 
-
+    boolean existsByJobIdAndStatusIn(Integer jobId, List<AppointmentsStatusEnum> statuses);
 }
