@@ -47,9 +47,9 @@ public class SecurityConfiguration {
                                 response.setStatus(HttpStatus.FORBIDDEN.value())
                         ))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(SWAGGER_WHITELIST).permitAll()           // ✅ Swagger
+                        .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(HttpMethod.POST, "/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/v1/job/**").permitAll() // ✅ listar serviços sem login
+                        .requestMatchers(HttpMethod.GET, "/v1/job/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
