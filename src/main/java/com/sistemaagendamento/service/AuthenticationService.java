@@ -30,6 +30,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${jwt.expiration}")
     private long expirationTime;
@@ -76,7 +77,6 @@ public class AuthenticationService {
                     )
             );
             String accessToken = tokenProvider.gerarToken(authentication);
-            // ✅ refresh token com validade maior (ex: 7 dias)
             String refreshToken = tokenProvider.gerarRefreshToken(authentication);
             return new TokenResponseDto(accessToken, refreshToken, expirationTime);
         } catch (BadCredentialsException e) {
@@ -84,9 +84,12 @@ public class AuthenticationService {
         }
     }
 
-    // ✅ Valida o refresh token e emite novo access token
     public TokenResponseDto refreshToken(String refreshToken) {
         if (!tokenProvider.isValidRefreshToken(refreshToken)) {
+            throw new BadrequestExeption("Refresh token inválido ou expirado!");
+        }
+
+        if (tokenBlacklistService.isBlacklisted(refreshToken)) {
             throw new BadrequestExeption("Refresh token inválido ou expirado!");
         }
 
@@ -102,10 +105,18 @@ public class AuthenticationService {
         String newAccessToken = tokenProvider.gerarToken(authentication);
         String newRefreshToken = tokenProvider.gerarRefreshToken(authentication);
 
+        tokenBlacklistService.blacklist(refreshToken);
+
         return new TokenResponseDto(newAccessToken, newRefreshToken, expirationTime);
     }
 
-    // ✅ Evita duplicação entre register e registerAdmin
+    public void logout(String token) {
+        if (!tokenProvider.isTokenValid(token)) {
+            throw new BadrequestExeption("Token inválido!");
+        }
+        tokenBlacklistService.blacklist(token);
+    }
+
     private RoleEntity findOrCreateRole(RoleTypeEnum roleType) {
         return rolesRepository.findByName(roleType.name())
                 .orElseGet(() -> rolesRepository.save(

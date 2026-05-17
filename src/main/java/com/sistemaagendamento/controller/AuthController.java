@@ -33,7 +33,7 @@ public class AuthController {
     @PostMapping("/register/admin")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Registra um novo admin (apenas admin)")
+    @Operation(summary = "Registra um novo admin")
     public void registerAdmin(
             @RequestBody @Valid UserRegisterDto userRegisterDto
     ) throws BadrequestExeption {
@@ -56,5 +56,15 @@ public class AuthController {
             @RequestParam String refreshToken
     ) {
         return authenticationService.refreshToken(refreshToken);
+    }
+
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Realiza logout invalidando o token")
+    public void logout(
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        String token = authHeader.substring(7);
+        authenticationService.logout(token);
     }
 }
