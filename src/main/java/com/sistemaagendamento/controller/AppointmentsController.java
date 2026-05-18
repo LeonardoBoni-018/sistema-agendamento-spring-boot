@@ -1,7 +1,7 @@
 package com.sistemaagendamento.controller;
 
-import com.sistemaagendamento.dto.AppointmentResponseDto;
 import com.sistemaagendamento.dto.AppointmentDto;
+import com.sistemaagendamento.dto.AppointmentResponseDto;
 import com.sistemaagendamento.enums.AppointmentsStatusEnum;
 import com.sistemaagendamento.service.AppointmentsService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,33 +54,38 @@ public class AppointmentsController {
     @Operation(summary = "Lista agendamentos de um usuário (admin)")
     public List<AppointmentResponseDto> appointmentsByUser(
             @PathVariable Integer userId,
+            Authentication authentication,
             @RequestParam(required = false) AppointmentsStatusEnum status,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        return appointmentsService.findAllAppointmentsUser(userId, status, date);
+        return appointmentsService.findAllAppointmentsUser(
+                userId, authentication, status, date
+        );
     }
 
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Lista todos os agendamentos (admin)")
+    @Operation(summary = "Lista todos os agendamentos do comércio (admin)")
     public List<AppointmentResponseDto> getAllAppointments(
+            Authentication authentication,
             @RequestParam(required = false) AppointmentsStatusEnum status,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        return appointmentsService.findAllAppointments(status, date);
+        return appointmentsService.findAllAppointments(authentication, status, date);
     }
 
     @GetMapping("/available")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Lista horários disponíveis para uma data e serviço")
     public List<LocalTime> getAvailableTimes(
+            Authentication authentication,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam Integer jobId
     ) {
-        return appointmentsService.getAvailableTimes(date, jobId);
+        return appointmentsService.getAvailableTimes(date, jobId, authentication);
     }
 
     @PostMapping
@@ -109,8 +114,11 @@ public class AppointmentsController {
     @Operation(summary = "Atualiza o status de um agendamento (admin)")
     public void updateStatusAppointment(
             @PathVariable Integer appointmentId,
-            @RequestParam AppointmentsStatusEnum status
+            @RequestParam AppointmentsStatusEnum status,
+            Authentication authentication
     ) {
-        appointmentsService.updateStatusAppointment(appointmentId, status);
+        appointmentsService.updateStatusAppointment(
+                appointmentId, status, authentication
+        );
     }
 }

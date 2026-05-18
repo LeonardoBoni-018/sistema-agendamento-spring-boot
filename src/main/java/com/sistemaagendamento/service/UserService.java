@@ -31,16 +31,10 @@ public class UserService {
         UserEntity user = userRepository.findById(loggedUser.getId())
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado!"));
 
-        if (userUpdateDto.getName() != null) {
-            user.setName(userUpdateDto.getName());
-        }
-
-        if (userUpdateDto.getPhone() != null) {
-            user.setPhone(userUpdateDto.getPhone());
-        }
+        if (userUpdateDto.getName() != null) user.setName(userUpdateDto.getName());
+        if (userUpdateDto.getPhone() != null) user.setPhone(userUpdateDto.getPhone());
 
         userRepository.save(user);
-
         log.info("Perfil atualizado: userId={}", user.getId());
     }
 
@@ -50,6 +44,10 @@ public class UserService {
                 .name(entity.getName())
                 .email(entity.getEmail())
                 .phone(entity.getPhone())
+                .comercioId(entity.getComercio() != null
+                        ? entity.getComercio().getId() : null)
+                .comercioNome(entity.getComercio() != null
+                        ? entity.getComercio().getNome() : null)
                 .build();
     }
 }

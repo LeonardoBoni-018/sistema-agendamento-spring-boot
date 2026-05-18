@@ -19,6 +19,8 @@ public class AppointmentResponseDto {
     private String jobName;
     private BigDecimal jobPrice;
     private Integer jobDurationMinutes;
+    private Integer comercioId;
+    private String comercioNome;
     private LocalDate date;
     private LocalTime time;
     private AppointmentsStatusEnum status;

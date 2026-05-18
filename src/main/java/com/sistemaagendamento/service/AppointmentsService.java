@@ -1,6 +1,7 @@
 package com.sistemaagendamento.service;
 
 import com.sistemaagendamento.databse.model.AppointmentsEntity;
+import com.sistemaagendamento.databse.model.ComercioEntity;
 import com.sistemaagendamento.databse.model.JobEntity;
 import com.sistemaagendamento.databse.model.UserEntity;
 import com.sistemaagendamento.databse.repository.IAppointmentsRepository;
@@ -54,14 +55,19 @@ public class AppointmentsService {
 
     public List<AppointmentResponseDto> findAllAppointmentsUser(
             Integer userId,
+            Authentication authentication,
             AppointmentsStatusEnum status,
             LocalDate date
     ) {
+        UserEntity loggedUser = (UserEntity) authentication.getPrincipal();
+
         userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado!"));
 
         return appointmentsRepository.findByUserId(userId)
                 .stream()
+                .filter(a -> a.getComercio().getId()
+                        .equals(loggedUser.getComercio().getId()))
                 .filter(a -> status == null || a.getStatus() == status)
                 .filter(a -> date == null || a.getDate().equals(date))
                 .map(this::toResponseDto)
@@ -69,10 +75,15 @@ public class AppointmentsService {
     }
 
     public List<AppointmentResponseDto> findAllAppointments(
+            Authentication authentication,
             AppointmentsStatusEnum status,
             LocalDate date
     ) {
-        return appointmentsRepository.findAll()
+        UserEntity loggedUser = (UserEntity) authentication.getPrincipal();
+
+        return appointmentsRepository.findByComercioId(
+                        loggedUser.getComercio().getId()
+                )
                 .stream()
                 .filter(a -> status == null || a.getStatus() == status)
                 .filter(a -> date == null || a.getDate().equals(date))
@@ -95,6 +106,13 @@ public class AppointmentsService {
         boolean isAdmin = loggedUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
+        if (!appointment.getComercio().getId()
+                .equals(loggedUser.getComercio().getId())) {
+            throw new BadrequestExeption(
+                    "Você não tem permissão para visualizar este agendamento!"
+            );
+        }
+
         if (!isAdmin && !appointment.getUser().getId().equals(loggedUser.getId())) {
             throw new BadrequestExeption(
                     "Você não tem permissão para visualizar este agendamento!"
@@ -104,18 +122,28 @@ public class AppointmentsService {
         return toResponseDto(appointment);
     }
 
-    // ✅ Retorna os horários livres do dia para um determinado serviço
-    public List<LocalTime> getAvailableTimes(LocalDate date, Integer jobId) {
+    public List<LocalTime> getAvailableTimes(
+            LocalDate date,
+            Integer jobId,
+            Authentication authentication
+    ) {
+        UserEntity loggedUser = (UserEntity) authentication.getPrincipal();
+
         JobEntity job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new NotFoundException("Serviço não encontrado!"));
 
+        if (!job.getComercio().getId().equals(loggedUser.getComercio().getId())) {
+            throw new BadrequestExeption("Serviço não pertence ao seu comércio!");
+        }
+
         List<AppointmentsEntity> bookedAppointments =
-                appointmentsRepository.findByDateAndStatusIn(
+                appointmentsRepository.findByDateAndStatusInAndComercioId(
                         date,
                         List.of(
                                 AppointmentsStatusEnum.PENDING,
                                 AppointmentsStatusEnum.CONFIRMED
-                        )
+                        ),
+                        loggedUser.getComercio().getId()
                 );
 
         List<LocalTime> available = new ArrayList<>();
@@ -136,10 +164,7 @@ public class AppointmentsService {
                 }
             }
 
-            if (!conflict) {
-                available.add(slot);
-            }
-
+            if (!conflict) available.add(slot);
             slot = slot.plusMinutes(job.getDurationMinutes());
         }
 
@@ -158,17 +183,26 @@ public class AppointmentsService {
         JobEntity job = jobRepository.findById(appointmentDto.getJobId())
                 .orElseThrow(() -> new NotFoundException("Serviço não encontrado!"));
 
+        // ✅ Valida se o serviço pertence ao comércio do usuário
+        if (!job.getComercio().getId().equals(user.getComercio().getId())) {
+            throw new BadrequestExeption(
+                    "Serviço não pertence ao seu comércio!"
+            );
+        }
+
         validateAppointmentDate(appointmentDto);
 
         validateScheduleConflict(
                 appointmentDto.getDate(),
                 appointmentDto.getTime(),
-                job.getDurationMinutes()
+                job.getDurationMinutes(),
+                user.getComercio().getId()
         );
 
         AppointmentsEntity appointment = AppointmentsEntity.builder()
                 .user(user)
                 .job(job)
+                .comercio(user.getComercio())
                 .date(appointmentDto.getDate())
                 .time(appointmentDto.getTime())
                 .status(AppointmentsStatusEnum.PENDING)
@@ -176,9 +210,9 @@ public class AppointmentsService {
 
         appointmentsRepository.save(appointment);
 
-        log.info("Agendamento criado: userId={}, jobId={}, date={}, time={}",
+        log.info("Agendamento criado: userId={}, jobId={}, comercioId={}, date={}",
                 user.getId(), job.getId(),
-                appointmentDto.getDate(), appointmentDto.getTime());
+                user.getComercio().getId(), appointmentDto.getDate());
     }
 
     private void validateAppointmentDate(AppointmentDto appointmentDto) {
@@ -205,17 +239,20 @@ public class AppointmentsService {
     private void validateScheduleConflict(
             LocalDate date,
             LocalTime newStartTime,
-            Integer durationMinutes
+            Integer durationMinutes,
+            Integer comercioId
     ) {
         LocalTime newEndTime = newStartTime.plusMinutes(durationMinutes);
 
+        // ✅ Verifica conflito apenas dentro do mesmo comércio
         List<AppointmentsEntity> appointments =
-                appointmentsRepository.findByDateAndStatusIn(
+                appointmentsRepository.findByDateAndStatusInAndComercioId(
                         date,
                         List.of(
                                 AppointmentsStatusEnum.PENDING,
                                 AppointmentsStatusEnum.CONFIRMED
-                        )
+                        ),
+                        comercioId
                 );
 
         for (AppointmentsEntity appointment : appointments) {
@@ -251,6 +288,14 @@ public class AppointmentsService {
         boolean isAdmin = loggedUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
+        // ✅ Valida comércio + dono
+        if (!appointment.getComercio().getId()
+                .equals(loggedUser.getComercio().getId())) {
+            throw new BadrequestExeption(
+                    "Você não tem permissão para cancelar este agendamento!"
+            );
+        }
+
         if (!isAdmin && !appointment.getUser().getId().equals(loggedUser.getId())) {
             throw new BadrequestExeption(
                     "Você não tem permissão para cancelar este agendamento!"
@@ -274,13 +319,23 @@ public class AppointmentsService {
 
     public void updateStatusAppointment(
             Integer appointmentId,
-            AppointmentsStatusEnum statusEnum
+            AppointmentsStatusEnum statusEnum,
+            Authentication authentication
     ) {
+        UserEntity loggedUser = (UserEntity) authentication.getPrincipal();
+
         AppointmentsEntity appointment =
                 appointmentsRepository.findById(appointmentId)
                         .orElseThrow(() ->
                                 new NotFoundException("Agendamento não encontrado!")
                         );
+
+        if (!appointment.getComercio().getId()
+                .equals(loggedUser.getComercio().getId())) {
+            throw new BadrequestExeption(
+                    "Você não tem permissão para atualizar este agendamento!"
+            );
+        }
 
         appointment.setStatus(statusEnum);
         appointmentsRepository.save(appointment);
@@ -297,6 +352,8 @@ public class AppointmentsService {
                 .jobName(entity.getJob().getName())
                 .jobPrice(entity.getJob().getPrice())
                 .jobDurationMinutes(entity.getJob().getDurationMinutes())
+                .comercioId(entity.getComercio().getId())
+                .comercioNome(entity.getComercio().getNome())
                 .date(entity.getDate())
                 .time(entity.getTime())
                 .status(entity.getStatus())

@@ -20,15 +20,20 @@ public class AppointmentsEntity extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity user;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_id")
     private JobEntity job;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "comercio_id", nullable = false)
+    private ComercioEntity comercio;
+
     private LocalDate date;
+
     private LocalTime time;
 
     @Enumerated(EnumType.STRING)

@@ -13,4 +13,6 @@ public class JobResponseDto {
     private String description;
     private BigDecimal price;
     private Integer durationMinutes;
+    private Integer comercioId;
+    private String comercioNome;
 }

@@ -19,7 +19,14 @@ public class JobEntity extends AuditableEntity {
     private Integer id;
 
     private String name;
+
     private String description;
+
     private BigDecimal price;
+
     private Integer durationMinutes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "comercio_id", nullable = false)
+    private ComercioEntity comercio;
 }

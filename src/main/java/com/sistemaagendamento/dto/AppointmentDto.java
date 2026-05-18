@@ -1,25 +1,20 @@
 package com.sistemaagendamento.dto;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
-@ToString
-@Builder
 public class AppointmentDto {
 
-    @NotNull
+    @NotNull(message = "Serviço obrigatório")
     private Integer jobId;
 
-    @NotNull
+    @NotNull(message = "Data obrigatória")
     private LocalDate date;
 
-    @NotNull
+    @NotNull(message = "Horário obrigatório")
     private LocalTime time;
 }

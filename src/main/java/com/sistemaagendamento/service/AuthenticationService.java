@@ -1,6 +1,7 @@
 package com.sistemaagendamento.service;
 
 import com.sistemaagendamento.config.TokenProvider;
+import com.sistemaagendamento.databse.model.ComercioEntity;
 import com.sistemaagendamento.databse.model.RoleEntity;
 import com.sistemaagendamento.databse.model.UserEntity;
 import com.sistemaagendamento.databse.repository.IRolesRepository;
@@ -31,45 +32,52 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
+    private final ComercioService comercioService;
 
     @Value("${jwt.expiration}")
     private long expirationTime;
 
-    public void register(UserRegisterDto userRegisterDto) throws BadrequestExeption {
-        if (userRepository.findByEmail(userRegisterDto.getEmail()).isPresent()) {
+    public void register(UserRegisterDto dto) {
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new BadrequestExeption("Usuário já registrado com este email!");
         }
+
+        ComercioEntity comercio = comercioService.findEntityById(dto.getComercioId());
 
         RoleEntity role = findOrCreateRole(RoleTypeEnum.ROLE_USER);
 
         userRepository.save(UserEntity.builder()
-                .name(userRegisterDto.getName())
-                .email(userRegisterDto.getEmail())
-                .phone(String.valueOf(userRegisterDto.getPhone()))
+                .name(dto.getName())
+                .email(dto.getEmail())
+                .phone(dto.getPhone())
                 .roles(Set.of(role))
-                .password(passwordEncoder.encode(userRegisterDto.getPassword()))
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .comercio(comercio)
                 .build()
         );
     }
 
-    public void registerAdmin(UserRegisterDto userRegisterDto) {
-        if (userRepository.findByEmail(userRegisterDto.getEmail()).isPresent()) {
+    public void registerAdmin(UserRegisterDto dto) {
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new BadrequestExeption("Usuário já registrado com este email!");
         }
+
+        ComercioEntity comercio = comercioService.findEntityById(dto.getComercioId());
 
         RoleEntity role = findOrCreateRole(RoleTypeEnum.ROLE_ADMIN);
 
         userRepository.save(UserEntity.builder()
-                .name(userRegisterDto.getName())
-                .email(userRegisterDto.getEmail())
-                .phone(String.valueOf(userRegisterDto.getPhone()))
+                .name(dto.getName())
+                .email(dto.getEmail())
+                .phone(dto.getPhone())
                 .roles(Set.of(role))
-                .password(passwordEncoder.encode(userRegisterDto.getPassword()))
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .comercio(comercio)
                 .build()
         );
     }
 
-    public TokenResponseDto login(LoginRequestDto dto) throws BadrequestExeption {
+    public TokenResponseDto login(LoginRequestDto dto) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
