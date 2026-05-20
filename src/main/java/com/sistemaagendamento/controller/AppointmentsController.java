@@ -2,6 +2,7 @@ package com.sistemaagendamento.controller;
 
 import com.sistemaagendamento.dto.AppointmentDto;
 import com.sistemaagendamento.dto.AppointmentResponseDto;
+import com.sistemaagendamento.dto.ReagendamentoDto;
 import com.sistemaagendamento.enums.AppointmentsStatusEnum;
 import com.sistemaagendamento.service.AppointmentsService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -120,5 +121,16 @@ public class AppointmentsController {
         appointmentsService.updateStatusAppointment(
                 appointmentId, status, authentication
         );
+    }
+
+    @PutMapping("/reagendar/{appointmentId}")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Reagenda um agendamento para nova data e horário")
+    public void reagendar(
+            @PathVariable Integer appointmentId,
+            @Valid @RequestBody ReagendamentoDto dto,
+            Authentication authentication
+    ) {
+        appointmentsService.reagendar(appointmentId, dto, authentication);
     }
 }

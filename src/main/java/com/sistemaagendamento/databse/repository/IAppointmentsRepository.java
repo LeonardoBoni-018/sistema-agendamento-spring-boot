@@ -7,7 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDate;
 import java.util.List;
 
-public interface IAppointmentsRepository extends JpaRepository<AppointmentsEntity, Integer> {
+public interface IAppointmentsRepository
+        extends JpaRepository<AppointmentsEntity, Integer> {
 
     List<AppointmentsEntity> findByUserId(Integer userId);
 
@@ -22,5 +23,12 @@ public interface IAppointmentsRepository extends JpaRepository<AppointmentsEntit
     boolean existsByJobIdAndStatusIn(
             Integer jobId,
             List<AppointmentsStatusEnum> statuses
+    );
+
+    List<AppointmentsEntity> findByDateAndStatusInAndComercioIdAndIdNot(
+            LocalDate date,
+            List<AppointmentsStatusEnum> statuses,
+            Integer comercioId,
+            Integer excludeId
     );
 }
