@@ -20,7 +20,6 @@ public class UserRegisterDto {
 
     private String phone;
 
-    // ✅ ID do comércio ao qual o usuário pertence
-    @NotNull(message = "Comércio obrigatório")
+    // ✅ ID do comércio ao qual o usuário pertence (opcional para admin)
     private Integer comercioId;
 }

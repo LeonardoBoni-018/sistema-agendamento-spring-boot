@@ -35,6 +35,13 @@ public class ComercioController {
         return comercioService.findById(id);
     }
 
+    @PostMapping("/setup")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Cria o primeiro comércio (sem autenticação)")
+    public ComercioResponseDto setup(@Valid @RequestBody ComercioDto dto) {
+        return comercioService.setupPrimeiroComercio(dto);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")

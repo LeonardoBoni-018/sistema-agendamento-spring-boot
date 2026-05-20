@@ -19,7 +19,9 @@ public class UserService {
 
     public UserResponseDto getMyProfile(Authentication authentication) {
         UserEntity loggedUser = (UserEntity) authentication.getPrincipal();
-        return toResponseDto(loggedUser);
+        UserEntity user = userRepository.findById(loggedUser.getId())
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado!"));
+        return toResponseDto(user);
     }
 
     public void updateMyProfile(
@@ -39,15 +41,26 @@ public class UserService {
     }
 
     private UserResponseDto toResponseDto(UserEntity entity) {
+        String role = entity.getRoles().stream()
+                .findFirst()
+                .map(r -> r.getName())
+                .orElse("ROLE_USER");
+        
+        Integer comercioId = null;
+        String comercioNome = null;
+        if (entity.getComercio() != null) {
+            comercioId = entity.getComercio().getId();
+            comercioNome = entity.getComercio().getNome();
+        }
+        
         return UserResponseDto.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .email(entity.getEmail())
                 .phone(entity.getPhone())
-                .comercioId(entity.getComercio() != null
-                        ? entity.getComercio().getId() : null)
-                .comercioNome(entity.getComercio() != null
-                        ? entity.getComercio().getNome() : null)
+                .comercioId(comercioId)
+                .comercioNome(comercioNome)
+                .role(role)
                 .build();
     }
 }

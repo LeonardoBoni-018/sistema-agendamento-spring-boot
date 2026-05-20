@@ -27,6 +27,13 @@ public class JobService {
 
     public List<JobResponseDto> findAllJobs(Authentication authentication) {
         UserEntity loggedUser = (UserEntity) authentication.getPrincipal();
+        
+        if (loggedUser.getComercio() == null) {
+            return jobRepository.findAll().stream()
+                    .map(this::toResponseDto)
+                    .toList();
+        }
+        
         return jobRepository.findByComercioId(loggedUser.getComercio().getId())
                 .stream()
                 .map(this::toResponseDto)
@@ -39,7 +46,9 @@ public class JobService {
         JobEntity job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new NotFoundException("Serviço não encontrado!"));
 
-        if (!job.getComercio().getId().equals(loggedUser.getComercio().getId())) {
+        if (loggedUser.getComercio() != null && 
+            job.getComercio() != null && 
+            !job.getComercio().getId().equals(loggedUser.getComercio().getId())) {
             throw new BadrequestExeption("Serviço não pertence ao seu comércio!");
         }
 
@@ -50,14 +59,18 @@ public class JobService {
         UserEntity loggedUser = (UserEntity) authentication.getPrincipal();
         ComercioEntity comercio = loggedUser.getComercio();
 
-        jobRepository.save(JobEntity.builder()
+        JobEntity job = JobEntity.builder()
                 .name(jobDto.getName())
                 .description(jobDto.getDescription())
                 .price(jobDto.getPrice())
                 .durationMinutes(jobDto.getDurationMinutes())
-                .comercio(comercio)
-                .build()
-        );
+                .build();
+        
+        if (comercio != null) {
+            job.setComercio(comercio);
+        }
+        
+        jobRepository.save(job);
     }
 
     public void updateJob(
@@ -70,8 +83,10 @@ public class JobService {
         JobEntity job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new NotFoundException("Serviço não encontrado!"));
 
-        if (!job.getComercio().getId().equals(loggedUser.getComercio().getId())) {
-            throw new BadrequestExeption("Serviço não pertence ao seu comércio!");
+        if (loggedUser.getComercio() != null && job.getComercio() != null) {
+            if (!job.getComercio().getId().equals(loggedUser.getComercio().getId())) {
+                throw new BadrequestExeption("Serviço não pertence ao seu comércio!");
+            }
         }
 
         if (jobDto.getName() != null) job.setName(jobDto.getName());
@@ -89,8 +104,10 @@ public class JobService {
         JobEntity job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new NotFoundException("Serviço não encontrado!"));
 
-        if (!job.getComercio().getId().equals(loggedUser.getComercio().getId())) {
-            throw new BadrequestExeption("Serviço não pertence ao seu comércio!");
+        if (loggedUser.getComercio() != null && job.getComercio() != null) {
+            if (!job.getComercio().getId().equals(loggedUser.getComercio().getId())) {
+                throw new BadrequestExeption("Serviço não pertence ao seu comércio!");
+            }
         }
 
         boolean hasActiveAppointments = appointmentsRepository
@@ -112,14 +129,17 @@ public class JobService {
     }
 
     private JobResponseDto toResponseDto(JobEntity entity) {
+        Integer comercioId = entity.getComercio() != null ? entity.getComercio().getId() : null;
+        String comercioNome = entity.getComercio() != null ? entity.getComercio().getNome() : null;
+        
         return JobResponseDto.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .price(entity.getPrice())
                 .durationMinutes(entity.getDurationMinutes())
-                .comercioId(entity.getComercio().getId())
-                .comercioNome(entity.getComercio().getNome())
+                .comercioId(comercioId)
+                .comercioNome(comercioNome)
                 .build();
     }
 }

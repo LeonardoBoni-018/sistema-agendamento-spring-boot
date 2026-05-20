@@ -37,6 +37,14 @@ public class SecurityConfiguration {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(request -> {
+                    var config = new org.springframework.web.cors.CorsConfiguration();
+                    config.addAllowedOriginPattern("*");
+                    config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedHeaders(java.util.List.of("*"));
+                    config.setAllowCredentials(true);
+                    return config;
+                }))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
@@ -47,7 +55,10 @@ public class SecurityConfiguration {
                         ))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/setup").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/comercio/setup").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/comercio/**").permitAll()
                         .anyRequest().authenticated()
                 )

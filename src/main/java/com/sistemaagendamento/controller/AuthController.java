@@ -1,5 +1,6 @@
 package com.sistemaagendamento.controller;
 
+import com.sistemaagendamento.dto.AdminSetupDto;
 import com.sistemaagendamento.dto.LoginRequestDto;
 import com.sistemaagendamento.dto.TokenResponseDto;
 import com.sistemaagendamento.dto.UserRegisterDto;
@@ -38,6 +39,15 @@ public class AuthController {
             @RequestBody @Valid UserRegisterDto userRegisterDto
     ) throws BadrequestExeption {
         authenticationService.registerAdmin(userRegisterDto);
+    }
+
+    @PostMapping("/setup")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Setup inicial: cria comércio e admin (sem autenticação)")
+    public TokenResponseDto setup(
+            @RequestBody @Valid AdminSetupDto dto
+    ) throws BadrequestExeption {
+        return authenticationService.setupInicial(dto);
     }
 
     @PostMapping("/login")

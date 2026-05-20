@@ -32,7 +32,13 @@ public class ComercioService {
     }
 
     public ComercioResponseDto create(ComercioDto dto) {
-        ComercioEntity comercio = comercioRepository.save(
+        ComercioEntity comercio = createEntity(dto);
+        log.info("Comércio criado: id={}, nome={}", comercio.getId(), comercio.getNome());
+        return toResponseDto(comercio);
+    }
+
+    public ComercioEntity createEntity(ComercioDto dto) {
+        return comercioRepository.save(
                 ComercioEntity.builder()
                         .nome(dto.getNome())
                         .descricao(dto.getDescricao())
@@ -40,8 +46,6 @@ public class ComercioService {
                         .endereco(dto.getEndereco())
                         .build()
         );
-        log.info("Comércio criado: id={}, nome={}", comercio.getId(), comercio.getNome());
-        return toResponseDto(comercio);
     }
 
     public void update(Integer id, ComercioDto dto) {
@@ -60,6 +64,17 @@ public class ComercioService {
     public ComercioEntity findEntityById(Integer id) {
         return comercioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Comércio não encontrado!"));
+    }
+
+    public boolean existsAny() {
+        return !comercioRepository.findAll().isEmpty();
+    }
+
+    public ComercioResponseDto setupPrimeiroComercio(ComercioDto dto) {
+        if (existsAny()) {
+            throw new RuntimeException("Comércio já existe. Use a rota autenticada para criar novos.");
+        }
+        return create(dto);
     }
 
     private ComercioResponseDto toResponseDto(ComercioEntity entity) {

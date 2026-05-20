@@ -6,6 +6,7 @@ import com.sistemaagendamento.databse.model.RoleEntity;
 import com.sistemaagendamento.databse.model.UserEntity;
 import com.sistemaagendamento.databse.repository.IRolesRepository;
 import com.sistemaagendamento.databse.repository.IUserRepository;
+import com.sistemaagendamento.dto.AdminSetupDto;
 import com.sistemaagendamento.dto.LoginRequestDto;
 import com.sistemaagendamento.dto.TokenResponseDto;
 import com.sistemaagendamento.dto.UserRegisterDto;
@@ -42,9 +43,12 @@ public class AuthenticationService {
             throw new BadrequestExeption("Usuário já registrado com este email!");
         }
 
-        ComercioEntity comercio = comercioService.findEntityById(dto.getComercioId());
-
         RoleEntity role = findOrCreateRole(RoleTypeEnum.ROLE_USER);
+
+        ComercioEntity comercio = null;
+        if (dto.getComercioId() != null) {
+            comercio = comercioService.findEntityById(dto.getComercioId());
+        }
 
         userRepository.save(UserEntity.builder()
                 .name(dto.getName())
@@ -62,9 +66,12 @@ public class AuthenticationService {
             throw new BadrequestExeption("Usuário já registrado com este email!");
         }
 
-        ComercioEntity comercio = comercioService.findEntityById(dto.getComercioId());
-
         RoleEntity role = findOrCreateRole(RoleTypeEnum.ROLE_ADMIN);
+
+        ComercioEntity comercio = null;
+        if (dto.getComercioId() != null) {
+            comercio = comercioService.findEntityById(dto.getComercioId());
+        }
 
         userRepository.save(UserEntity.builder()
                 .name(dto.getName())
@@ -75,6 +82,39 @@ public class AuthenticationService {
                 .comercio(comercio)
                 .build()
         );
+    }
+
+    public TokenResponseDto setupInicial(AdminSetupDto dto) {
+        if (userRepository.findAll().size() > 0) {
+            throw new BadrequestExeption("Setup já foi realizado!");
+        }
+
+        if (comercioService.existsAny()) {
+            throw new BadrequestExeption("Setup já foi realizado!");
+        }
+
+        RoleEntity roleAdmin = findOrCreateRole(RoleTypeEnum.ROLE_ADMIN);
+
+        ComercioEntity comercio = comercioService.createEntity(dto.getComercio());
+
+        UserEntity user = userRepository.save(UserEntity.builder()
+                .name(dto.getName())
+                .email(dto.getEmail())
+                .phone(dto.getPhone())
+                .roles(Set.of(roleAdmin))
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .comercio(comercio)
+                .build()
+        );
+
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user, null, user.getAuthorities()
+        );
+
+        String accessToken = tokenProvider.gerarToken(authentication);
+        String refreshToken = tokenProvider.gerarRefreshToken(authentication);
+        return new TokenResponseDto(accessToken, refreshToken, expirationTime);
     }
 
     public TokenResponseDto login(LoginRequestDto dto) {
