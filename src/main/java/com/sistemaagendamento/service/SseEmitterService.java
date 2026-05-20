@@ -40,18 +40,23 @@ public class SseEmitterService {
             remove(comercioId, emitter);
         }
 
-        log.info("SSE conectado: comercioId={}, total={}",
-                comercioId, emitters.getOrDefault(comercioId,
-                        List.of()).size());
+        log.info("SSE conectado: comercioId={}, total emissores={}",
+                comercioId, emitters.getOrDefault(comercioId, List.of()).size());
 
         return emitter;
     }
 
     public void sendToComercio(Integer comercioId, String eventType, Object data) {
+        log.info("[SSE] Enviando evento: eventType={}, comercioId={}, total emissores={}",
+                eventType, comercioId, emitters.getOrDefault(comercioId, List.of()).size());
+
         List<SseEmitter> comercioEmitters =
                 emitters.getOrDefault(comercioId, List.of());
 
-        if (comercioEmitters.isEmpty()) return;
+        if (comercioEmitters.isEmpty()) {
+            log.warn("[SSE] Nenhum emissor encontrado para comercioId={}", comercioId);
+            return;
+        }
 
         List<SseEmitter> dead = new CopyOnWriteArrayList<>();
 
@@ -63,7 +68,9 @@ public class SseEmitterService {
                 emitter.send(SseEmitter.event()
                         .name(eventType)
                         .data(json));
+                log.info("[SSE] Evento enviado com sucesso para comercioId={}", comercioId);
             } catch (IOException e) {
+                log.error("[SSE] Erro ao enviar para comercioId={}", comercioId, e);
                 dead.add(emitter);
             }
         }

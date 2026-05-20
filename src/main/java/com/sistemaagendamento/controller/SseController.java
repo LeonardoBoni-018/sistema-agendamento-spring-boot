@@ -5,12 +5,14 @@ import com.sistemaagendamento.service.SseEmitterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+@Slf4j
 @RestController
 @RequestMapping("/v1/events")
 @RequiredArgsConstructor
@@ -24,6 +26,8 @@ public class SseController {
     public SseEmitter stream(Authentication authentication) {
         UserEntity user = (UserEntity) authentication.getPrincipal();
         Integer comercioId = user.getComercio() != null ? user.getComercio().getId() : null;
+        log.info("[SSE] Conexão: userId={}, comercioId={}, hasComercio={}",
+                user.getId(), comercioId, user.getComercio() != null);
         return sseEmitterService.createEmitter(comercioId);
     }
 }
