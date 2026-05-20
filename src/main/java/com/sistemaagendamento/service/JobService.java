@@ -12,17 +12,21 @@ import com.sistemaagendamento.enums.AppointmentsStatusEnum;
 import com.sistemaagendamento.exception.BadrequestExeption;
 import com.sistemaagendamento.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class JobService {
 
     private final IJobRepository jobRepository;
+    private final SseEmitterService sseEmitterService;
     private final IAppointmentsRepository appointmentsRepository;
 
     public List<JobResponseDto> findAllJobs(Authentication authentication) {
@@ -70,7 +74,13 @@ public class JobService {
             job.setComercio(comercio);
         }
         
-        jobRepository.save(job);
+        JobEntity saved = jobRepository.save(job);
+        log.info("Serviço criado: id={}, nome={}", saved.getId(), saved.getName());
+        
+        if (comercio != null) {
+            sseEmitterService.sendToComercio(comercio.getId(), "JOB_CREATED", 
+                Map.of("job", toResponseDto(saved), "message", "Novo serviço criado: " + saved.getName()));
+        }
     }
 
     public void updateJob(
@@ -95,6 +105,12 @@ public class JobService {
         if (jobDto.getDurationMinutes() != null) job.setDurationMinutes(jobDto.getDurationMinutes());
 
         jobRepository.save(job);
+        log.info("Serviço atualizado: id={}", jobId);
+        
+        if (job.getComercio() != null) {
+            sseEmitterService.sendToComercio(job.getComercio().getId(), "JOB_UPDATED", 
+                Map.of("job", toResponseDto(job), "message", "Serviço atualizado: " + job.getName()));
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -126,6 +142,12 @@ public class JobService {
         }
 
         jobRepository.deleteById(jobId);
+        log.info("Serviço deletado: id={}", jobId);
+        
+        if (job.getComercio() != null) {
+            sseEmitterService.sendToComercio(job.getComercio().getId(), "JOB_DELETED", 
+                Map.of("jobId", jobId, "message", "Serviço removido: " + job.getName()));
+        }
     }
 
     private JobResponseDto toResponseDto(JobEntity entity) {

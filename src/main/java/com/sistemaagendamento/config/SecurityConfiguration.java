@@ -55,11 +55,9 @@ public class SecurityConfiguration {
                         ))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/v1/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/v1/auth/register").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/v1/auth/setup").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/v1/comercio/setup").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/comercio/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/events/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter,
