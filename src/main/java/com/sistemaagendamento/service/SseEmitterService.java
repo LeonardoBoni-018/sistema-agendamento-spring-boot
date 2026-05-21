@@ -33,6 +33,7 @@ public class SseEmitterService {
         emitter.onError(e -> remove(comercioId, emitter));
 
         try {
+            // ✅ Envia keepalive inicial — confirma conexão sem parsear
             emitter.send(SseEmitter.event()
                     .name("connected")
                     .data("ok"));
@@ -40,50 +41,53 @@ public class SseEmitterService {
             remove(comercioId, emitter);
         }
 
-        log.info("SSE conectado: comercioId={}, total emissores={}",
-                comercioId, emitters.getOrDefault(comercioId, List.of()).size());
+        log.info("SSE conectado: comercioId={}, conexoes={}",
+                comercioId,
+                emitters.getOrDefault(comercioId, List.of()).size());
 
         return emitter;
     }
 
-    public void sendToComercio(Integer comercioId, String eventType, Object data) {
-        log.info("[SSE] Enviando evento: eventType={}, comercioId={}, total emissores={}",
-                eventType, comercioId, emitters.getOrDefault(comercioId, List.of()).size());
-
-        List<SseEmitter> comercioEmitters =
+    public void sendToComercio(
+            Integer comercioId,
+            String eventType,
+            Object data
+    ) {
+        List<SseEmitter> list =
                 emitters.getOrDefault(comercioId, List.of());
 
-        if (comercioEmitters.isEmpty()) {
-            log.warn("[SSE] Nenhum emissor encontrado para comercioId={}", comercioId);
-            return;
-        }
+        if (list.isEmpty()) return;
 
         List<SseEmitter> dead = new CopyOnWriteArrayList<>();
 
-        for (SseEmitter emitter : comercioEmitters) {
+        for (SseEmitter emitter : list) {
             try {
+                // ✅ Serializa UMA única vez — o front parseia UMA vez
                 String json = objectMapper.writeValueAsString(
                         Map.of("type", eventType, "data", data)
                 );
+
                 emitter.send(SseEmitter.event()
                         .name(eventType)
                         .data(json));
-                log.info("[SSE] Evento enviado com sucesso para comercioId={}", comercioId);
+
             } catch (IOException e) {
-                log.error("[SSE] Erro ao enviar para comercioId={}", comercioId, e);
                 dead.add(emitter);
             }
         }
 
         dead.forEach(e -> remove(comercioId, e));
+
+        if (!dead.isEmpty()) {
+            log.info("Removidos {} emitters mortos do comercioId={}",
+                    dead.size(), comercioId);
+        }
     }
 
     private void remove(Integer comercioId, SseEmitter emitter) {
         List<SseEmitter> list = emitters.get(comercioId);
         if (list != null) {
             list.remove(emitter);
-            log.info("SSE desconectado: comercioId={}, restantes={}",
-                    comercioId, list.size());
         }
     }
 }
