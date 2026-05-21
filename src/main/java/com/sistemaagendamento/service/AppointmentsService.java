@@ -29,6 +29,7 @@ public class AppointmentsService {
     private final SseEmitterService sseEmitterService;
     private final HorarioFuncionamentoService horarioService;
     private final BloqueioHorarioService bloqueioService;
+    private final IAvaliacaoRepository avaliacaoRepository;
 
     public List<AppointmentResponseDto> myAppointments(
             Authentication authentication,
@@ -487,6 +488,7 @@ public class AppointmentsService {
                 .date(e.getDate())
                 .time(e.getTime())
                 .status(e.getStatus())
+                .jaAvaliou(avaliacaoRepository.existsByAppointmentId(e.getId()))
                 .createdAt(e.getCreatedAt())
                 .updatedAt(e.getUpdatedAt())
                 .build();

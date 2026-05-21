@@ -24,6 +24,7 @@ public class AppointmentResponseDto {
     private LocalDate date;
     private LocalTime time;
     private AppointmentsStatusEnum status;
+    private Boolean jaAvaliou;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
