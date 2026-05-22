@@ -21,6 +21,8 @@ public class AppointmentResponseDto {
     private Integer jobDurationMinutes;
     private Integer comercioId;
     private String comercioNome;
+    private Integer funcionarioId;
+    private String funcionarioNome;
     private LocalDate date;
     private LocalTime time;
     private AppointmentsStatusEnum status;

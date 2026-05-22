@@ -57,7 +57,8 @@ public class SecurityConfiguration {
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(HttpMethod.POST, "/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/comercio/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/v1/events/**").permitAll()
+                        .requestMatchers("/v1/events/**").authenticated()
+                        .requestMatchers("/v1/publico/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter,

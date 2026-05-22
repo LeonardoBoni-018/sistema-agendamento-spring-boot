@@ -86,6 +86,14 @@ public class HorarioFuncionamentoService {
         return toDto(saved);
     }
 
+    public List<HorarioFuncionamentoResponseDto> findByComercioId(Integer comercioId) {
+        return repository.findByComercioId(comercioId)
+                .stream()
+                .map(this::toDto)
+                .sorted((a, b) -> a.getDiaSemana().compareTo(b.getDiaSemana()))
+                .toList();
+    }
+
     public HorarioFuncionamentoEntity findByComercioAndDia(
             Integer comercioId, DayOfWeek dia
     ) {

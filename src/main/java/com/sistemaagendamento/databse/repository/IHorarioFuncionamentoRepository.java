@@ -15,4 +15,6 @@ public interface IHorarioFuncionamentoRepository
     Optional<HorarioFuncionamentoEntity> findByComercioIdAndDiaSemana(
             Integer comercioId, DayOfWeek diaSemana
     );
+
+
 }

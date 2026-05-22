@@ -30,6 +30,8 @@ public class AppointmentsService {
     private final HorarioFuncionamentoService horarioService;
     private final BloqueioHorarioService bloqueioService;
     private final IAvaliacaoRepository avaliacaoRepository;
+    private final EmailService emailService;
+    private final FuncionarioService funcionarioService;
 
     public List<AppointmentResponseDto> myAppointments(
             Authentication authentication,
@@ -104,7 +106,6 @@ public class AppointmentsService {
         return toResponseDto(appointment);
     }
 
-    // ✅ Horários disponíveis agora respeitam horário por dia + bloqueios
     public List<LocalTime> getAvailableTimes(
             LocalDate date,
             Integer jobId,
@@ -187,6 +188,13 @@ public class AppointmentsService {
             throw new BadrequestExeption("Serviço não pertence ao seu comércio!");
         }
 
+        FuncionarioEntity funcionario = null;
+        if (appointmentDto.getFuncionarioId() != null) {
+            funcionario = funcionarioService.findEntityById(
+                    appointmentDto.getFuncionarioId()
+            );
+        }
+
         validateAppointmentDate(
                 appointmentDto.getDate(),
                 appointmentDto.getTime(),
@@ -199,11 +207,13 @@ public class AppointmentsService {
                 appointmentDto.getTime(),
                 job.getDurationMinutes(),
                 user.getComercio().getId(),
+                funcionario != null ? funcionario.getId() : null,
                 null
         );
 
         AppointmentsEntity appointment = AppointmentsEntity.builder()
                 .user(user).job(job).comercio(user.getComercio())
+                .funcionario(funcionario)
                 .date(appointmentDto.getDate())
                 .time(appointmentDto.getTime())
                 .status(AppointmentsStatusEnum.PENDING)
@@ -212,20 +222,19 @@ public class AppointmentsService {
         AppointmentsEntity saved = appointmentsRepository.save(appointment);
         AppointmentResponseDto dto = toResponseDto(saved);
 
+        emailService.enviarConfirmacao(saved);
+
         sseEmitterService.sendToComercio(
                 user.getComercio().getId(),
                 "APPOINTMENT_CREATED",
-                Map.of(
-                        "appointment", dto,
+                Map.of("appointment", dto,
                         "message", "Novo agendamento de " + user.getName()
-                                + " para " + job.getName()
-                )
+                                + " para " + job.getName())
         );
 
         log.info("Agendamento criado: userId={}, jobId={}", user.getId(), job.getId());
     }
 
-    // ✅ Reagendamento — muda data/hora de um agendamento existente
     public void reagendar(
             Integer appointmentId,
             ReagendamentoDto dto,
@@ -267,12 +276,12 @@ public class AppointmentsService {
                 comercioId
         );
 
-        // ✅ Exclui o próprio agendamento da validação de conflito
         validateScheduleConflict(
                 dto.getNovaData(),
                 dto.getNovoHorario(),
                 duracao,
                 comercioId,
+                appointment.getFuncionario() != null ? appointment.getFuncionario().getId() : null,
                 appointmentId
         );
 
@@ -363,18 +372,20 @@ public class AppointmentsService {
 
         if (!appointment.getComercio().getId()
                 .equals(loggedUser.getComercio().getId())) {
-            throw new BadrequestExeption("Sem permissão para atualizar!");
+            throw new BadrequestExeption("Sem permissão!");
         }
 
         appointment.setStatus(statusEnum);
         AppointmentsEntity saved = appointmentsRepository.save(appointment);
         AppointmentResponseDto dto = toResponseDto(saved);
 
+        emailService.enviarAtualizacaoStatus(saved);
+
         String message = switch (statusEnum) {
-            case CONFIRMED -> "Seu agendamento de " +
-                    appointment.getJob().getName() + " foi confirmado!";
-            case CANCELED -> "Seu agendamento de " +
-                    appointment.getJob().getName() + " foi cancelado.";
+            case CONFIRMED -> "Agendamento de " +
+                    appointment.getJob().getName() + " confirmado!";
+            case CANCELED -> "Agendamento de " +
+                    appointment.getJob().getName() + " cancelado.";
             case FINISHED -> "Agendamento de " +
                     appointment.getJob().getName() + " finalizado.";
             default -> "Status atualizado.";
@@ -439,32 +450,44 @@ public class AppointmentsService {
             LocalTime newStart,
             Integer duration,
             Integer comercioId,
-            Integer excludeAppointmentId
+            Integer funcionarioId,
+            Integer excludeId
     ) {
         LocalTime newEnd = newStart.plusMinutes(duration);
 
-        List<AppointmentsEntity> appointments = excludeAppointmentId != null
-                ? appointmentsRepository.findByDateAndStatusInAndComercioIdAndIdNot(
-                date,
-                List.of(AppointmentsStatusEnum.PENDING,
-                        AppointmentsStatusEnum.CONFIRMED),
-                comercioId,
-                excludeAppointmentId
-        )
-                : appointmentsRepository.findByDateAndStatusInAndComercioId(
-                date,
-                List.of(AppointmentsStatusEnum.PENDING,
-                        AppointmentsStatusEnum.CONFIRMED),
-                comercioId
-        );
+        List<AppointmentsEntity> appointments;
+
+        if (funcionarioId != null) {
+            appointments = appointmentsRepository
+                    .findByDateAndStatusInAndFuncionarioId(
+                            date,
+                            List.of(AppointmentsStatusEnum.PENDING,
+                                    AppointmentsStatusEnum.CONFIRMED),
+                            funcionarioId
+                    );
+        } else if (excludeId != null) {
+            appointments = appointmentsRepository
+                    .findByDateAndStatusInAndComercioIdAndIdNot(
+                            date,
+                            List.of(AppointmentsStatusEnum.PENDING,
+                                    AppointmentsStatusEnum.CONFIRMED),
+                            comercioId, excludeId
+                    );
+        } else {
+            appointments = appointmentsRepository
+                    .findByDateAndStatusInAndComercioId(
+                            date,
+                            List.of(AppointmentsStatusEnum.PENDING,
+                                    AppointmentsStatusEnum.CONFIRMED),
+                            comercioId
+                    );
+        }
 
         for (AppointmentsEntity a : appointments) {
             LocalTime es = a.getTime();
             LocalTime ee = es.plusMinutes(a.getJob().getDurationMinutes());
             if (newStart.isBefore(ee) && newEnd.isAfter(es)) {
-                throw new BadrequestExeption(
-                        "Já existe um agendamento neste horário!"
-                );
+                throw new BadrequestExeption("Horário já ocupado!");
             }
         }
     }
@@ -485,6 +508,10 @@ public class AppointmentsService {
                 .jobDurationMinutes(e.getJob().getDurationMinutes())
                 .comercioId(e.getComercio().getId())
                 .comercioNome(e.getComercio().getNome())
+                .funcionarioId(e.getFuncionario() != null
+                        ? e.getFuncionario().getId() : null)
+                .funcionarioNome(e.getFuncionario() != null
+                        ? e.getFuncionario().getNome() : null)
                 .date(e.getDate())
                 .time(e.getTime())
                 .status(e.getStatus())

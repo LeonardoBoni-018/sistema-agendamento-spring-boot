@@ -38,4 +38,8 @@ public class AppointmentsEntity extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     private AppointmentsStatusEnum status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "funcionario_id")
+    private FuncionarioEntity funcionario;
 }
