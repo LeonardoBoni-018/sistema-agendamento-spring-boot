@@ -2,8 +2,10 @@ package com.sistemaagendamento.dto;
 
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 public class UserUpdateDto {
 
     @Size(min = 2, max = 100, message = "Nome deve ter entre 2 e 100 caracteres")

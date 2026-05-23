@@ -59,6 +59,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/v1/comercio/**").permitAll()
                         .requestMatchers("/v1/events/**").authenticated()
                         .requestMatchers("/v1/publico/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/pagamento/webhook").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter,

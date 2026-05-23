@@ -1,6 +1,8 @@
 package com.sistemaagendamento.service;
 
 import com.sistemaagendamento.databse.model.AppointmentsEntity;
+import com.sistemaagendamento.databse.model.FilaEsperaEntity;
+import com.sistemaagendamento.databse.model.PagamentoEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -272,5 +274,79 @@ public class EmailService {
                 </body>
                 </html>
                 """.formatted(titulo, comercio, nome, corpo, btnUrl, btnLabel);
+    }
+
+    @Async
+    public void enviarNotificacaoFila(FilaEsperaEntity fila) {
+        try {
+            String email = fila.getUser().getEmail();
+            String nome = fila.getUser().getName();
+            String servico = fila.getJob().getName();
+            String comercio = fila.getComercio().getNome();
+            String data = fila.getDate().format(
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            );
+
+            String html = buildEmailHtml(
+                    "Vaga disponível! 🎉",
+                    nome,
+                    comercio,
+                    """
+                    <p style="color:#374151;font-size:15px;margin:0 0 16px;">
+                      Uma vaga abriu para o serviço que você estava aguardando!
+                      Acesse agora para garantir seu horário.
+                    </p>
+                    """ + buildDetalhesHtml(servico, data, "—", null) +
+                            """
+                            <p style="color:#DC2626;font-size:13px;margin:12px 0 0;font-weight:600;">
+                              ⚡ Corra! A vaga pode ser ocupada por outro cliente a qualquer momento.
+                            </p>
+                            """,
+                    "Agendar agora",
+                    appUrl + "/appointments/new"
+            );
+
+            send(email, "Vaga disponível — " + servico + " em " + comercio, html);
+
+        } catch (Exception e) {
+            log.error("Erro ao enviar email de fila: {}", e.getMessage());
+        }
+    }
+
+    @Async
+    public void enviarConfirmacaoPagamento(
+            AppointmentsEntity appointment,
+            PagamentoEntity pagamento
+    ) {
+        try {
+            String email = appointment.getUser().getEmail();
+            String nome = appointment.getUser().getName();
+            String servico = appointment.getJob().getName();
+            String comercio = appointment.getComercio().getNome();
+            String data = appointment.getDate().format(
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            );
+            String hora = appointment.getTime().toString().substring(0, 5);
+            String valor = "R$ " + pagamento.getValor().toPlainString();
+
+            String html = buildEmailHtml(
+                    "Pagamento confirmado! ✅",
+                    nome,
+                    comercio,
+                    """
+                    <p style="color:#374151;font-size:15px;margin:0 0 16px;">
+                      Seu pagamento foi <strong>aprovado</strong> e o agendamento confirmado!
+                    </p>
+                    """ + buildDetalhesHtml(servico, data, hora, null) +
+                            "<p style=\"color:#059669;font-size:14px;font-weight:600;margin:12px 0;\">✅ Pago: " + valor + "</p>",
+                    "Ver agendamento",
+                    appUrl + "/appointments"
+            );
+
+            send(email, "Pagamento confirmado — " + comercio, html);
+
+        } catch (Exception e) {
+            log.error("Erro ao enviar email de pagamento: {}", e.getMessage());
+        }
     }
 }

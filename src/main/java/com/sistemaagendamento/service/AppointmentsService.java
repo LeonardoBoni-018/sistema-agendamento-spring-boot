@@ -32,6 +32,7 @@ public class AppointmentsService {
     private final IAvaliacaoRepository avaliacaoRepository;
     private final EmailService emailService;
     private final FuncionarioService funcionarioService;
+    private final FilaEsperaService filaEsperaService;
 
     public List<AppointmentResponseDto> myAppointments(
             Authentication authentication,
@@ -353,6 +354,12 @@ public class AppointmentsService {
                         "message", "Agendamento de " +
                                 appointment.getUser().getName() + " cancelado"
                 )
+        );
+
+        filaEsperaService.notificarProximoDaFila(
+                appointment.getComercio().getId(),
+                appointment.getDate(),
+                appointment.getJob().getId()
         );
 
         log.warn("Cancelado: id={}, por={}", appointmentId, loggedUser.getId());

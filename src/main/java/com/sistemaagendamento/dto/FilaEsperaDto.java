@@ -9,7 +9,7 @@ import java.time.LocalTime;
 
 @Getter
 @Setter
-public class AppointmentDto {
+public class FilaEsperaDto {
 
     @NotNull(message = "Serviço obrigatório")
     private Integer jobId;
@@ -17,8 +17,7 @@ public class AppointmentDto {
     @NotNull(message = "Data obrigatória")
     private LocalDate date;
 
-    @NotNull(message = "Horário obrigatório")
-    private LocalTime time;
+    private LocalTime horarioPreferido;
 
     private Integer funcionarioId;
 }
