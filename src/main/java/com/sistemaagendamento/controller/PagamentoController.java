@@ -44,8 +44,13 @@ public class PagamentoController {
     @PostMapping("/webhook")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Webhook do MercadoPago")
-    public void webhook(@RequestBody Map<String, Object> payload) {
-        pagamentoService.processarWebhook(payload);
+    public void webhook(
+            @RequestBody Map<String, Object> payload,
+            @RequestHeader(value = "x-signature", required = false) String signature,
+            @RequestHeader(value = "x-request-id", required = false) String requestId,
+            @RequestParam(value = "data.id", required = false) String dataId
+    ) {
+        pagamentoService.processarWebhook(payload, signature, requestId, dataId);
     }
 
     @PostMapping("/config")

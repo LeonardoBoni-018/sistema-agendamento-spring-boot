@@ -1,28 +1,58 @@
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain
+  tomcat:
+    threads:
+      max: ${TOMCAT_MAX_THREADS:50}
+
 spring:
   application:
     name: sistema-agendamento
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
   datasource:
-    url: jdbc:mysql://localhost:3305/sistema_agendamento?createDatabaseIfNotExist=true
-    username: ${DATABASE_USERNAME:root}
-    password: ${DATABASE_PASSWORD}
+    # Neon: jdbc:postgresql://<host>/<db>?sslmode=require
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/sistema_agendamento}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: 1
+      # Neon suspende computação ociosa; reciclar conexões antes disso
+      max-lifetime: 240000
+      idle-timeout: 120000
+      keepalive-time: 60000
+      connection-timeout: 20000
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        jdbc:
+          time_zone: UTC
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 jwt:
   expiration: ${JWT_EXPIRATION:900000}
@@ -34,18 +64,31 @@ cors:
 
 app:
   url: ${APP_URL:http://localhost:5173}
+  api-url: ${API_URL:http://localhost:8080}
   mail:
-    from: ${MAIL_USERNAME}
+    from: ${MAIL_USERNAME:}
     from-name: ${MAIL_FROM_NAME:Sistema Agendamento}
 
 mercadopago:
-  access-token: ${MERCADOPAGO_ACCESS_TOKEN}
-  webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET}
+  access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
+  webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 springdoc:
   swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
     path: /swagger-ui.html
   api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
     path: /v3/api-docs
   packages-to-scan: com.sistemaagendamento
   default-produces-media-type: application/json

@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: sistema-agendamento-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DATABASE_URL        # Neon: jdbc:postgresql://<host>/<db>?sslmode=require
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: JWT_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS  # URL do front na Vercel
+        sync: false
+      - key: APP_URL               # URL do front na Vercel
+        sync: false
+      - key: API_URL               # URL pública deste serviço no Render
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: MERCADOPAGO_WEBHOOK_SECRET
+        sync: false

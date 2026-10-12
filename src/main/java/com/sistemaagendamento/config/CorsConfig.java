@@ -23,12 +23,16 @@ public class CorsConfig {
         if ("*".equals(allowedOrigins)) {
             config.addAllowedOriginPattern("*");
         } else {
-            List<String> origins = Arrays.asList(allowedOrigins.split(","));
+            List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(o -> !o.isEmpty())
+                    .toList();
             config.setAllowedOrigins(origins);
         }
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "text/event-stream"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
         config.setExposedHeaders(List.of("Content-Type"));
 
         UrlBasedCorsConfigurationSource source =

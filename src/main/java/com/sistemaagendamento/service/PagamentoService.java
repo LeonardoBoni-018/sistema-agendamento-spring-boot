@@ -19,7 +19,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import org.springframework.security.access.AccessDeniedException;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +45,14 @@ public class PagamentoService {
     @Value("${mercadopago.access-token}")
     private String accessToken;
 
+    @Value("${mercadopago.webhook-secret:}")
+    private String webhookSecret;
+
     @Value("${app.url}")
     private String appUrl;
+
+    @Value("${app.api-url}")
+    private String apiUrl;
 
     public PagamentoResponseDto gerarCheckout(
             Integer appointmentId,
@@ -98,8 +111,7 @@ public class PagamentoService {
                     .backUrls(backUrls)
                     .autoReturn("approved")
                     .externalReference(String.valueOf(appointmentId))
-                    .notificationUrl(appUrl.replace("5173", "8080")
-                            + "/v1/pagamento/webhook")
+                    .notificationUrl(apiUrl + "/v1/pagamento/webhook")
                     .build();
 
             PreferenceClient client = new PreferenceClient();
@@ -133,7 +145,49 @@ public class PagamentoService {
                 .orElse(null);
     }
 
-    public void processarWebhook(Map<String, Object> payload) {
+    /**
+     * Valida a assinatura do MercadoPago (manifest id:{data.id};request-id:{x-request-id};ts:{ts};).
+     */
+    boolean assinaturaValida(String signature, String requestId, String dataId) {
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            log.warn("MERCADOPAGO_WEBHOOK_SECRET não configurado; webhook rejeitado");
+            return false;
+        }
+        if (signature == null || dataId == null) return false;
+        try {
+            String ts = null, v1 = null;
+            for (String part : signature.split(",")) {
+                String[] kv = part.trim().split("=", 2);
+                if (kv.length != 2) continue;
+                if ("ts".equals(kv[0])) ts = kv[1];
+                if ("v1".equals(kv[0])) v1 = kv[1];
+            }
+            if (ts == null || v1 == null) return false;
+            String manifest = "id:" + dataId.toLowerCase() + ";request-id:"
+                    + requestId + ";ts:" + ts + ";";
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(
+                    webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            String expected = HexFormat.of().formatHex(
+                    mac.doFinal(manifest.getBytes(StandardCharsets.UTF_8)));
+            return MessageDigest.isEqual(
+                    expected.getBytes(StandardCharsets.UTF_8),
+                    v1.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void processarWebhook(
+            Map<String, Object> payload,
+            String signature,
+            String requestId,
+            String dataId
+    ) {
+        if (!assinaturaValida(signature, requestId, dataId)) {
+            log.warn("Webhook MP com assinatura inválida");
+            throw new AccessDeniedException("Assinatura inválida");
+        }
         try {
             String type = (String) payload.get("type");
             if (!"payment".equals(type)) return;
@@ -148,17 +202,26 @@ public class PagamentoService {
             Payment payment =
                     client.get(Long.parseLong(mpPaymentId));
 
-            String preferenceId = payment.getCurrencyId();
+            String externalReference = payment.getExternalReference();
+            String preferenceId = externalReference;
             String status = payment.getStatus();
 
-            PagamentoEntity pagamento = pagamentoRepository
-                    .findByMpPreferenceId(preferenceId)
-                    .orElse(null);
+            PagamentoEntity pagamento = null;
+            if (externalReference != null) {
+                pagamento = pagamentoRepository
+                        .findByAppointmentId(Integer.valueOf(externalReference))
+                        .orElse(null);
+            }
 
             if (pagamento == null) {
-                log.warn("Pagamento não encontrado para preferenceId={}",
-                        preferenceId);
+                log.warn("Pagamento não encontrado para appointmentId={}",
+                        externalReference);
                 return;
+            }
+
+            if (pagamento.getStatus() == PagamentoStatusEnum.APROVADO
+                    && "approved".equals(status)) {
+                return; // idempotência: webhook reentregue
             }
 
             pagamento.setMpPaymentId(mpPaymentId);

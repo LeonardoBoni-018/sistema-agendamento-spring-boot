@@ -79,7 +79,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Query param para SSE (EventSource não suporta headers)
         String queryToken = request.getParameter("token");
-        if (queryToken != null && !queryToken.isBlank()) {
+        if (request.getRequestURI().startsWith("/v1/events/")
+                && queryToken != null && !queryToken.isBlank()) {
             return queryToken;
         }
 

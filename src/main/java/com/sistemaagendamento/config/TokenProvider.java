@@ -8,7 +8,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
@@ -22,6 +24,8 @@ public class TokenProvider {
 
     @Value("${jwt.key}")
     private String key;
+
+    private SecretKey signingKey;
 
     private static final String TOKEN_TYPE_CLAIM = "token_type";
     private static final String ACCESS_TOKEN_TYPE = "access";
@@ -88,7 +92,16 @@ public class TokenProvider {
                 .getPayload();
     }
 
+    @PostConstruct
+    void validateKey() {
+        if (key == null || key.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "JWT_KEY deve ter pelo menos 32 caracteres");
+        }
+        signingKey = Keys.hmacShaKeyFor(key.getBytes(StandardCharsets.UTF_8));
+    }
+
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(key.getBytes());
+        return signingKey;
     }
 }

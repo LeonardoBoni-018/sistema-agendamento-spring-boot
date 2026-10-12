@@ -85,7 +85,7 @@ public class AuthenticationService {
     }
 
     public TokenResponseDto setupInicial(AdminSetupDto dto) {
-        if (userRepository.findAll().size() > 0) {
+        if (userRepository.count() > 0) {
             throw new BadrequestExeption("Setup já foi realizado!");
         }
 
