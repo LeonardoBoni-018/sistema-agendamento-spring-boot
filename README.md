@@ -136,3 +136,15 @@ Este projeto está licenciado sob a licença MIT — veja o arquivo [LICENSE](LI
 <div align="center">
   <sub>Desenvolvido com ❤️</sub>
 </div>
+
+## Deploy (Render + Neon)
+
+1. **Neon**: crie o projeto Postgres e copie host, banco, usuário e senha. A URL JDBC é
+   `jdbc:postgresql://<host>/<db>?sslmode=require` (use o host *pooled* se disponível).
+2. **Render**: crie um *Web Service* a partir do repositório (runtime Docker — há `Dockerfile` e `render.yaml`).
+   Health check: `/actuator/health`.
+3. Variáveis de ambiente (veja `.env.example`): `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`,
+   `JWT_KEY` (mín. 32 caracteres), `CORS_ALLOWED_ORIGINS` e `APP_URL` (URL da Vercel), `API_URL` (URL do Render),
+   `MAIL_*`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`.
+4. No painel do MercadoPago, configure o webhook para `<API_URL>/v1/pagamento/webhook` e use o mesmo segredo.
+5. O plano gratuito do Render hiberna após inatividade; a primeira requisição pode demorar ~1 min.
