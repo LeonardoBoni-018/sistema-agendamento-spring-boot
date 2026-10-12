@@ -28,7 +28,9 @@ spring:
       keepalive-time: 60000
       connection-timeout: 20000
   jpa:
-    open-in-view: false
+    # Os services mapeiam relações LAZY para DTO fora de @Transactional;
+    # sem open-in-view isso gera LazyInitializationException (ex.: /v1/user/me)
+    open-in-view: true
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
     show-sql: false
