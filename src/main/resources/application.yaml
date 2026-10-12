@@ -82,6 +82,10 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    mail:
+      # SMTP é opcional; não deve derrubar o health check do Render
+      enabled: false
 
 springdoc:
   swagger-ui:
